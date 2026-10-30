@@ -18,3 +18,10 @@ out/
 Thumbs.db
 .vscode/*
 !.vscode/extensions.json
+
+# ไฟล์ skill ที่เครื่องมือ AI/Prisma สร้างอัตโนมัติ
+.agents/
+.claude/
+.cursor/
+.devin/
+.windsurf/
