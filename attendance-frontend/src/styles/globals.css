@@ -1,0 +1,108 @@
+
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+
+  /* Background */
+  --background: #fff9f4;
+  --foreground: #38292c;
+
+  /* Primary - Ruby Red */
+  --primary: #b42332;
+  --primary-hover: #921c2a;
+  --primary-foreground: #ffffff;
+
+  /* Secondary - Gold */
+  --secondary: #f4b942;
+  --secondary-hover: #e8a82d;
+  --secondary-foreground: #603d13;
+
+  /* Text */
+  --heading: #821c29;
+  --muted: #857477;
+
+  /* Surface */
+  --surface: #ffffff;
+  --surface-soft: #fff5e8;
+  --surface-hover: #fff8f0;
+
+  /* Border */
+  --border: #f1e3dc;
+
+  /* Badges */
+  --badge-bg: #fff0d5;
+  --badge-text: #9a5612;
+
+  /* Gradient */
+  --gradient-primary: linear-gradient(
+    135deg,
+    #c52d3b 0%,
+    #921c2a 100%
+  );
+
+  --gradient-accent: linear-gradient(
+    90deg,
+    #b42332 0%,
+    #f4b942 100%
+  );
+
+  /* Shadows */
+  --shadow-card:
+    0 8px 32px rgba(130, 28, 41, 0.055);
+
+  --shadow-button:
+    0 8px 20px rgba(180, 35, 50, 0.22);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-heading: var(--heading);
+  --color-muted: var(--muted);
+
+  --color-surface: var(--surface);
+  --color-surface-soft: var(--surface-soft);
+  --color-border: var(--border);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  color-scheme: light;
+  background: var(--background);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+
+  background: var(--background);
+  color: var(--foreground);
+
+  font-family:
+    var(--font-geist-sans),
+    "Noto Sans Thai",
+    system-ui,
+    sans-serif;
+
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: #ffe5aa;
+  color: #821c29;
+}
