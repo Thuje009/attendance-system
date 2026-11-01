@@ -19,7 +19,7 @@ type AuthReq = { user: { id: string; role: string } };
 @Controller('classrooms')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ClassroomsController {
-  constructor(private readonly classrooms: ClassroomsService) {}
+  constructor(private readonly classrooms: ClassroomsService) { }
 
   // ครู/แอดมิน: ชั้นของฉัน
   @Get('mine')
@@ -35,7 +35,7 @@ export class ClassroomsController {
 
   @Roles('ADMIN')
   @Post()
-  create(@Body() body: { grade: number; room?: number; academicYear: number }) {
+  create(@Body() body: { level?: 'KINDERGARTEN' | 'PRIMARY'; grade: number; room?: number; academicYear: number }) {
     return this.classrooms.create(body);
   }
 
@@ -53,9 +53,9 @@ export class ClassroomsController {
   ) {
     return this.classrooms.enrollStudent(id, body.studentId, body.number);
   }
-  
 
-    @Roles('ADMIN')
+
+  @Roles('ADMIN')
   @Get('all')
   all() {
     return this.classrooms.findAllForAdmin();
@@ -73,7 +73,7 @@ export class ClassroomsController {
     return this.classrooms.removeStudent(id, studentId);
   }
 
-    @Roles('ADMIN')
+  @Roles('ADMIN')
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.classrooms.remove(id);

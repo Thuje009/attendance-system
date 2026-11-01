@@ -11,10 +11,12 @@ import {
   deleteClassroom,
   removeTeacher,
 } from "./actions";
+import { gradeLimit, LEVEL_LONG, type Level } from "@/src/lib/classroom";
 
 export type AdminClassroom = {
   id: string;
   grade: number;
+  level: Level;
   room: number;
   academicYear: number;
   _count: { enrollments: number };
@@ -55,6 +57,15 @@ function SchoolIcon({ className = "h-5 w-5" }: { className?: string }) {
       <path d="M3 21h18M5 21V9l7-6 7 6v12M9 21v-7h6v7M9 10h.01M15 10h.01" />
     </svg>
   );
+}
+
+function getClassroomLabel(
+  level: Level,
+  grade: number,
+  room: number,
+) {
+  const prefix = level === "KINDERGARTEN" ? "อ." : "ป.";
+  return `${prefix}${grade}/${room}`;
 }
 
 function UsersIcon({ className = "h-5 w-5" }: { className?: string }) {
@@ -144,6 +155,7 @@ export default function ClassroomsManager({
   const [msg, setMsg] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const [pending, start] = useTransition();
+  const [level, setLevel] = useState<Level>("PRIMARY");
 
   const totalStudents = classrooms.reduce(
     (sum, c) => sum + c._count.enrollments,
@@ -155,6 +167,21 @@ export default function ClassroomsManager({
       c.teachers.map((t) => t.user.id),
     ),
   ).size;
+
+  // เรียงอนุบาลก่อนประถม
+  const sortedClassrooms = [...classrooms].sort((a, b) => {
+    const levelOrder = {
+      KINDERGARTEN: 0,
+      PRIMARY: 1,
+    };
+
+    return (
+      levelOrder[a.level] - levelOrder[b.level] ||
+      a.grade - b.grade ||
+      a.room - b.room ||
+      b.academicYear - a.academicYear
+    );
+  });
 
   const handle = (
     fn: () => Promise<{ ok: boolean; error?: string }>,
@@ -257,36 +284,52 @@ export default function ClassroomsManager({
             e.preventDefault();
 
             if (
+              !Number.isInteger(grade) ||
+              grade < 1 ||
+              grade > gradeLimit(level) ||
               !Number.isInteger(room) ||
               room < 1 ||
               !Number.isInteger(year) ||
               year < 1
             ) {
               setIsError(true);
-              setMsg("กรุณากรอกเลขห้องและปีการศึกษาให้ถูกต้อง");
+              setMsg("กรุณาตรวจสอบระดับชั้น เลขห้อง และปีการศึกษาให้ถูกต้อง");
               return;
             }
 
             handle(
-              () => createClassroom(grade, room, year),
+              () => createClassroom(level, grade, room, year),
               "สร้างชั้นเรียนเรียบร้อยแล้ว",
             );
           }}
         >
           <label className="block space-y-2">
-            <span className="text-xs font-bold text-[var(--heading)]">
-              ระดับชั้น
-            </span>
+            <span className="text-xs font-bold text-[var(--heading)]">ระดับ</span>
+            <select
+              className={inputCls}
+              value={level}
+              disabled={pending}
+              onChange={(e) => {
+                setLevel(e.target.value as Level);
+                setGrade(1);
+              }}
+            >
+              <option value="KINDERGARTEN">อนุบาล</option>
+              <option value="PRIMARY">ประถมศึกษา</option>
+            </select>
+          </label>
 
+          <label className="block space-y-2">
+            <span className="text-xs font-bold text-[var(--heading)]">ชั้น</span>
             <select
               className={inputCls}
               value={grade}
               disabled={pending}
               onChange={(e) => setGrade(Number(e.target.value))}
             >
-              {[1, 2, 3, 4, 5, 6].map((g) => (
+              {Array.from({ length: gradeLimit(level) }, (_, i) => i + 1).map((g) => (
                 <option key={g} value={g}>
-                  ประถมศึกษาปีที่ {g}
+                  {LEVEL_LONG[level]} {g}
                 </option>
               ))}
             </select>
@@ -406,7 +449,9 @@ export default function ClassroomsManager({
         </div>
       ) : (
         <div className="grid gap-5 lg:grid-cols-2">
-          {classrooms.map((c) => {
+          {sortedClassrooms.map((c) => {
+            const label = `${c.level === "KINDERGARTEN" ? "อ." : "ป."}${c.grade}/${c.room}`;
+
             const assigned = new Set(
               c.teachers.map((t) => t.user.id),
             );
@@ -442,7 +487,7 @@ export default function ClassroomsManager({
                         </p>
 
                         <h3 className="mt-0.5 text-2xl font-extrabold tracking-tight text-[var(--heading)]">
-                          ป.{c.grade}/{c.room}
+                          {label}
                         </h3>
                       </div>
                     </div>
@@ -463,16 +508,15 @@ export default function ClassroomsManager({
                       >
                         ดูรายงาน
                       </Link>
-
                       <button
                         type="button"
                         disabled={pending}
-                        aria-label={`ลบชั้น ป.${c.grade}/${c.room}`}
+                        aria-label={`ลบชั้น ${label}`}
                         title="ลบชั้นเรียน"
                         onClick={() => {
                           if (
                             window.confirm(
-                              `ต้องการลบชั้น ป.${c.grade}/${c.room} ปี ${c.academicYear} หรือไม่?\n\nลบได้เฉพาะชั้นที่ไม่มีนักเรียนและไม่มีประวัติเช็คชื่อ`,
+                              `ต้องการลบชั้น ${label} ปี ${c.academicYear} หรือไม่?\n\nลบได้เฉพาะชั้นที่ไม่มีนักเรียนและไม่มีประวัติเช็คชื่อ`,
                             )
                           ) {
                             handle(
@@ -556,7 +600,7 @@ export default function ClassroomsManager({
                             onClick={() => {
                               if (
                                 window.confirm(
-                                  `ต้องการเอา ${t.user.fullName} ออกจาก ป.${c.grade}/${c.room} หรือไม่?`,
+                                  `ต้องการเอา ${t.user.fullName} ออกจาก ${label} หรือไม่?`,
                                 )
                               ) {
                                 handle(
@@ -583,7 +627,7 @@ export default function ClassroomsManager({
                   <div className="mt-4">
                     {available.length > 0 ? (
                       <select
-                        aria-label={`มอบหมายครูให้ชั้น ป.${c.grade}/${c.room}`}
+                        aria-label={`มอบหมายครูให้ชั้น ${label}`}
                         className={inputCls}
                         value=""
                         disabled={pending}

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -17,7 +18,7 @@ export class ClassroomsService {
         user.role === 'ADMIN'
           ? undefined
           : { teachers: { some: { userId: user.id } } },
-      orderBy: [{ academicYear: 'desc' }, { grade: 'asc' }, { room: 'asc' }],
+      orderBy: [{ academicYear: 'desc' }, { level: 'asc' }, { grade: 'asc' }, { room: 'asc' }],
       include: {
         _count: {
           select: {
@@ -28,18 +29,45 @@ export class ClassroomsService {
     });
   }
 
-  async create(data: { grade: number; room?: number; academicYear: number }) {
-    try {
-      return await this.prisma.classroom.create({
-        data: {
+  async create(data: {
+    level?: 'KINDERGARTEN' | 'PRIMARY';
+    grade: number;
+    room?: number;
+    academicYear: number;
+  }) {
+    const level = data.level ?? 'PRIMARY';
+    if (level !== 'KINDERGARTEN' && level !== 'PRIMARY') {
+      throw new BadRequestException('ระดับชั้นไม่ถูกต้อง');
+    }
+
+    const maxGrade = level === 'KINDERGARTEN' ? 3 : 6;
+    const room = data.room ?? 1;
+
+    if (!Number.isInteger(data.grade) || data.grade < 1 || data.grade > maxGrade) {
+      throw new BadRequestException(`ชั้นต้องอยู่ระหว่าง 1 ถึง ${maxGrade}`);
+    }
+    if (!Number.isInteger(room) || room < 1) {
+      throw new BadRequestException('เลขห้องไม่ถูกต้อง');
+    }
+    if (!Number.isInteger(data.academicYear) || data.academicYear < 2500) {
+      throw new BadRequestException('ปีการศึกษาต้องเป็น พ.ศ.');
+    }
+
+    const exists = await this.prisma.classroom.findUnique({
+      where: {
+        level_grade_room_academicYear: {
+          level,
           grade: data.grade,
-          room: data.room ?? 1,
+          room,
           academicYear: data.academicYear,
         },
-      });
-    } catch {
-      throw new ConflictException('มีชั้นเรียนนี้อยู่แล้ว');
-    }
+      },
+    });
+    if (exists) throw new ConflictException('มีชั้นเรียนนี้อยู่แล้ว');
+
+    return this.prisma.classroom.create({
+      data: { level, grade: data.grade, room, academicYear: data.academicYear },
+    });
   }
 
   async assignTeacher(classroomId: string, userId: string) {
@@ -73,7 +101,21 @@ export class ClassroomsService {
     await this.assertAccess(classroomId, user);
     return this.prisma.enrollment.findMany({
       where: { classroomId },
-      include: { student: true },
+      select: {
+        studentId: true,
+        classroomId: true,
+        number: true,
+        student: {
+          select: {
+            id: true,
+            studentCode: true,
+            prefix: true,
+            firstName: true,
+            lastName: true,
+            isActive: true,
+          },
+        },
+      },
       orderBy: { number: 'asc' },
     });
   }
@@ -81,7 +123,7 @@ export class ClassroomsService {
   // แอดมิน: ทุกชั้นพร้อมรายชื่อครูและจำนวนนักเรียน
   findAllForAdmin() {
     return this.prisma.classroom.findMany({
-      orderBy: [{ academicYear: 'desc' }, { grade: 'asc' }, { room: 'asc' }],
+      orderBy: [{ academicYear: 'desc' }, { level: 'asc' }, { grade: 'asc' }, { room: 'asc' }],
       include: {
         _count: {
           select: {
@@ -108,7 +150,6 @@ export class ClassroomsService {
     });
     return { removed: true };
   }
-
 
   async remove(classroomId: string) {
     const classroom = await this.prisma.classroom.findUnique({

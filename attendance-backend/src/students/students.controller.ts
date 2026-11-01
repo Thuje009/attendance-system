@@ -32,6 +32,12 @@ export class StudentsController {
       lastName: string;
       classroomId?: string;
       number?: number;
+      prefix?: string;
+      birthDate?: string;
+      fatherName?: string;
+      motherName?: string;
+      guardianName?: string;
+      phone?: string;
     },
   ) {
     return this.students.create(body);
@@ -40,7 +46,18 @@ export class StudentsController {
   @Patch(':id')
   update(
     @Param('id') id: string,
-    @Body() body: { firstName?: string; lastName?: string; isActive?: boolean },
+    @Body()
+    body: {
+      firstName?: string;
+      lastName?: string;
+      isActive?: boolean;
+      prefix?: string;
+      birthDate?: string;
+      fatherName?: string;
+      motherName?: string;
+      guardianName?: string;
+      phone?: string;
+    },
   ) {
     return this.students.update(id, body);
   }

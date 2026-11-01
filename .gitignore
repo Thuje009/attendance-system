@@ -25,3 +25,6 @@ Thumbs.db
 .cursor/
 .devin/
 .windsurf/
+# ไฟล์ข้อมูลนักเรียนจริง ห้าม commit
+*.xlsx
+*.xls

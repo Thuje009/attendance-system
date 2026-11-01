@@ -24,6 +24,11 @@ enum AttendanceStatus {
   LEAVE    // ลา (ป่วย/กิจ)
 }
 
+enum SchoolLevel {
+  KINDERGARTEN
+  PRIMARY
+}
+
 // ==========================================
 // 3. USER MODEL (ข้อมูลผู้ใช้งานระบบ: ครู และ แอดมิน)
 // ==========================================
@@ -46,18 +51,17 @@ model User {
 // 4. CLASSROOM MODEL (ข้อมูลห้องเรียน ป.1 - ป.6)
 // ==========================================
 model Classroom {
-  id           String @id @default(cuid())
-  grade        Int    // ระดับชั้น (เช่น 1 ถึง 6 แทน ป.1 - ป.6)
-  room         Int    @default(1) // ห้องที่ (เช่น ห้อง 1, ห้อง 2)
-  academicYear Int    // ปีการศึกษา (เช่น 2569)
+  id           String      @id @default(cuid())
+  level        SchoolLevel @default(PRIMARY)
+  grade        Int
+  room         Int         @default(1)
+  academicYear Int
 
-  // ความสัมพันธ์
   teachers    TeacherClassroom[]
   enrollments Enrollment[]
   sessions    AttendanceSession[]
 
-  // ป้องกันการสร้างห้องซ้ำในชั้น, ห้อง และปีการศึกษาเดียวกัน
-  @@unique([grade, room, academicYear])
+  @@unique([level, grade, room, academicYear])
 }
 
 // ==========================================
@@ -77,13 +81,18 @@ model TeacherClassroom {
 // 6. STUDENT MODEL (ข้อมูลนักเรียน)
 // ==========================================
 model Student {
-  id          String  @id @default(cuid())
-  studentCode String  @unique // รหัสประจำตัวนักเรียน
-  firstName   String  // ชื่อจริง
-  lastName    String  // นามสกุล
-  isActive    Boolean @default(true) // สถานะนักเรียน (ยังศึกษาอยู่ / พ้นสภาพ)
+  id           String    @id @default(cuid())
+  studentCode  String    @unique
+  prefix       String?
+  firstName    String
+  lastName     String
+  birthDate    DateTime? @db.Date
+  fatherName   String?
+  motherName   String?
+  guardianName String?
+  phone        String?
+  isActive     Boolean   @default(true)
 
-  // ความสัมพันธ์
   enrollments Enrollment[]
   records     AttendanceRecord[]
 }
