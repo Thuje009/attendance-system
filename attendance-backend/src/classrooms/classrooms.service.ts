@@ -8,7 +8,7 @@ import { PrismaService } from '../prisma.service.js';
 
 @Injectable()
 export class ClassroomsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // แอดมินเห็นทุกชั้น, ครูเห็นเฉพาะชั้นที่ถูกมอบหมาย
   findMine(user: { id: string; role: string }) {
@@ -18,7 +18,13 @@ export class ClassroomsService {
           ? undefined
           : { teachers: { some: { userId: user.id } } },
       orderBy: [{ academicYear: 'desc' }, { grade: 'asc' }, { room: 'asc' }],
-      include: { _count: { select: { enrollments: true } } },
+      include: {
+        _count: {
+          select: {
+            enrollments: { where: { student: { isActive: true } } },
+          },
+        },
+      },
     });
   }
 
@@ -77,7 +83,11 @@ export class ClassroomsService {
     return this.prisma.classroom.findMany({
       orderBy: [{ academicYear: 'desc' }, { grade: 'asc' }, { room: 'asc' }],
       include: {
-        _count: { select: { enrollments: true } },
+        _count: {
+          select: {
+            enrollments: { where: { student: { isActive: true } } },
+          },
+        },
         teachers: {
           include: { user: { select: { id: true, fullName: true } } },
         },
@@ -100,7 +110,7 @@ export class ClassroomsService {
   }
 
 
-    async remove(classroomId: string) {
+  async remove(classroomId: string) {
     const classroom = await this.prisma.classroom.findUnique({
       where: { id: classroomId },
       include: { _count: { select: { enrollments: true, sessions: true } } },
