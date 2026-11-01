@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { api } from "@/src/lib/api";
 import AttendanceForm from "./AttendanceForm";
 
+
 type Data = {
   date: string;
   checked: boolean;
@@ -92,9 +93,10 @@ async function AttendanceContent({
       {/* DATE SELECTOR */}
 
       <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white shadow-[var(--shadow-card)]">
-        <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
 
-          <div className="flex items-center gap-4">
+          {/* ATTENDANCE DATE */}
+          <div className="flex min-w-0 items-center gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#FFF0D5] text-[#A76B17]">
               <svg
                 viewBox="0 0 24 24"
@@ -112,7 +114,7 @@ async function AttendanceContent({
               </svg>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">
                 Attendance Date
               </p>
@@ -127,45 +129,85 @@ async function AttendanceContent({
             </div>
           </div>
 
-          <form
-            method="GET"
-            className="flex w-full items-center gap-2 sm:w-auto"
-          >
-            <input
-              type="date"
-              name="date"
-              aria-label="เลือกวันที่เช็คชื่อ"
-              defaultValue={date}
-              className="
-                min-w-0 flex-1 rounded-xl
-                border border-[var(--border)]
-                bg-[#FFFCFA] px-4 py-3
-                text-sm font-medium text-[var(--foreground)]
-                outline-none transition-all
-                focus:border-[#B42332]
-                focus:ring-4 focus:ring-[#B42332]/10
-                sm:flex-none
-              "
-            />
+          {/* ACTIONS */}
+          <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto lg:shrink-0">
 
-            <button
-              type="submit"
-              className="
-                inline-flex shrink-0 cursor-pointer
-                items-center justify-center gap-2
-                rounded-xl bg-[#B42332]
-                px-5 py-3 text-sm font-bold text-white
-                shadow-[0_5px_14px_rgba(180,35,50,0.18)]
-                transition-all duration-200
-                hover:-translate-y-0.5 hover:bg-[#921C2A]
-                active:translate-y-0
-              "
+            {/* DATE FORM */}
+            <form
+              method="GET"
+              className="flex min-w-0 flex-1 items-center gap-2 lg:flex-none"
             >
-              ดูข้อมูล
-            </button>
-          </form>
+              <input
+                type="date"
+                name="date"
+                aria-label="เลือกวันที่เช็คชื่อ"
+                defaultValue={date}
+                className="
+            min-w-0 flex-1 rounded-xl
+            border border-[var(--border)]
+            bg-[#FFFCFA] px-3 py-3
+            text-sm font-medium text-[var(--foreground)]
+            outline-none transition-all
+            focus:border-[#B42332]
+            focus:ring-4 focus:ring-[#B42332]/10
+            sm:w-44 sm:flex-none
+          "
+              />
+
+              <button
+                type="submit"
+                className="
+            inline-flex shrink-0 cursor-pointer
+            items-center justify-center gap-2
+            rounded-xl bg-[#B42332]
+            px-4 py-3 text-sm font-bold text-white
+            shadow-[0_5px_14px_rgba(180,35,50,0.18)]
+            transition-all duration-200
+            hover:-translate-y-0.5 hover:bg-[#921C2A]
+            active:translate-y-0
+          "
+              >
+                ดูข้อมูล
+              </button>
+            </form>
+
+            {/* REPORT LINK */}
+            <Link
+              href={`/classes/${id}/reports`}
+              className="
+          inline-flex w-full shrink-0
+          items-center justify-center gap-2
+          rounded-xl border border-[var(--border)]
+          bg-white px-5 py-3
+          text-sm font-bold text-[var(--heading)]
+          transition-all duration-200
+          hover:border-[var(--primary)]
+          hover:bg-[var(--surface-soft)]
+          hover:text-[var(--primary)]
+          sm:w-auto
+        "
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+                aria-hidden="true"
+              >
+                <path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3" />
+                <path d="M16 3h5v5M10 14 21 3" />
+                <path d="M7 8h5M7 12h3M7 16h5" />
+              </svg>
+              ดูรายงาน
+            </Link>
+
+          </div>
         </div>
       </section>
+
 
       {/* ATTENDANCE LIST */}
 
@@ -208,16 +250,14 @@ async function AttendanceContent({
           {/* บอกสถานะการบันทึกเท่านั้น ไม่ใช่สรุปสถิติ */}
 
           <span
-            className={`inline-flex w-fit items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ${
-              data.checked
-                ? "bg-[#EAF8F0] text-[#16845B]"
-                : "bg-[#FFF0D5] text-[#9A5612]"
-            }`}
+            className={`inline-flex w-fit items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ${data.checked
+              ? "bg-[#EAF8F0] text-[#16845B]"
+              : "bg-[#FFF0D5] text-[#9A5612]"
+              }`}
           >
             <span
-              className={`h-1.5 w-1.5 rounded-full ${
-                data.checked ? "bg-[#16845B]" : "bg-[#D69E36]"
-              }`}
+              className={`h-1.5 w-1.5 rounded-full ${data.checked ? "bg-[#16845B]" : "bg-[#D69E36]"
+                }`}
             />
 
             {data.checked ? "บันทึกเช็คชื่อแล้ว" : "ยังไม่ได้บันทึก"}
@@ -380,7 +420,6 @@ export default function AttendancePage(props: PageProps) {
             searchParams={props.searchParams}
           />
         </Suspense>
-
       </div>
     </main>
   );

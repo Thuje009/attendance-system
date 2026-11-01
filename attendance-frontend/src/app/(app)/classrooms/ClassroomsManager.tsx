@@ -2,6 +2,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import type { ReactNode } from "react";
+import Link from "next/link";
+
 import {
   assignTeacher,
   createClassroom,
@@ -72,6 +75,7 @@ function UsersIcon({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 
+
 function TrashIcon() {
   return (
     <svg
@@ -97,7 +101,7 @@ function StatCard({
 }: {
   label: string;
   value: number;
-  icon: React.ReactNode;
+  icon: ReactNode;
   description: string;
 }) {
   return (
@@ -229,6 +233,7 @@ export default function ClassroomsManager({
         />
       </div>
 
+
       {/* CREATE CLASSROOM */}
       <section className={`${cardCls} overflow-hidden`}>
         <div className="flex items-center gap-3 border-b border-[var(--border)] px-5 py-5 sm:px-6">
@@ -356,11 +361,10 @@ export default function ClassroomsManager({
         <div
           role="status"
           aria-live="polite"
-          className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium ${
-            isError
-              ? "border-red-200 bg-red-50 text-red-700"
-              : "border-emerald-200 bg-emerald-50 text-emerald-800"
-          }`}
+          className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium ${isError
+            ? "border-red-200 bg-red-50 text-red-700"
+            : "border-emerald-200 bg-emerald-50 text-emerald-800"
+            }`}
         >
           <span className="text-lg">
             {isError ? "!" : "✓"}
@@ -426,13 +430,13 @@ export default function ClassroomsManager({
                 <div className="p-5 sm:p-6">
 
                   {/* ROOM HEADER */}
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#fff0f1] text-[var(--primary)]">
                         <SchoolIcon className="h-7 w-7" />
                       </div>
 
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
                           Classroom
                         </p>
@@ -443,33 +447,53 @@ export default function ClassroomsManager({
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      disabled={pending}
-                      aria-label={`ลบชั้น ป.${c.grade}/${c.room}`}
-                      title="ลบชั้นเรียน"
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `ต้องการลบชั้น ป.${c.grade}/${c.room} ปี ${c.academicYear} หรือไม่?\n\nลบได้เฉพาะชั้นที่ไม่มีนักเรียนและไม่มีประวัติเช็คชื่อ`,
-                          )
-                        ) {
-                          handle(
-                            () => deleteClassroom(c.id),
-                            "ลบชั้นเรียนเรียบร้อยแล้ว",
-                          );
-                        }
-                      }}
-                      className="
-                        flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center
-                        rounded-xl border border-[var(--border)]
-                        text-[var(--muted)] transition-all
-                        hover:border-red-200 hover:bg-red-50 hover:text-red-600
-                        disabled:cursor-not-allowed disabled:opacity-50
-                      "
-                    >
-                      <TrashIcon />
-                    </button>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Link
+                        href={`/classes/${c.id}/reports`}
+                        className="
+                          inline-flex items-center gap-2 rounded-xl
+                          border border-[var(--border)] bg-white
+                          px-3 py-2 text-xs font-bold
+                          text-[var(--heading)] transition-all
+                          hover:border-[var(--primary)]
+                          hover:bg-[#fff0f1]
+                          hover:text-[var(--primary)]
+                          sm:px-4 sm:text-sm
+                        "
+                      >
+                        ดูรายงาน
+                      </Link>
+
+                      <button
+                        type="button"
+                        disabled={pending}
+                        aria-label={`ลบชั้น ป.${c.grade}/${c.room}`}
+                        title="ลบชั้นเรียน"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `ต้องการลบชั้น ป.${c.grade}/${c.room} ปี ${c.academicYear} หรือไม่?\n\nลบได้เฉพาะชั้นที่ไม่มีนักเรียนและไม่มีประวัติเช็คชื่อ`,
+                            )
+                          ) {
+                            handle(
+                              () => deleteClassroom(c.id),
+                              "ลบชั้นเรียนเรียบร้อยแล้ว",
+                            );
+                          }
+                        }}
+                        className="
+                          flex h-9 w-9 shrink-0 cursor-pointer
+                          items-center justify-center rounded-xl
+                          border border-[var(--border)]
+                          text-[var(--muted)] transition-all
+                          hover:border-red-200 hover:bg-red-50
+                          hover:text-red-600
+                          disabled:cursor-not-allowed disabled:opacity-50
+                        "
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
                   </div>
 
                   {/* META */}
