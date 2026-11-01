@@ -14,6 +14,7 @@ const navItems = [
     href: "/classes",
     adminHref: "/classrooms",
     label: "ชั้นเรียน",
+    teacherLabel: "ชั้นเรียนของฉัน",
     roles: ["ADMIN", "TEACHER"],
     icon: (
       <svg
@@ -51,6 +52,28 @@ const navItems = [
       </svg>
     ),
   },
+  {
+    href: "/students",
+    label: "นักเรียน",
+    roles: ["ADMIN"],
+    icon: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="h-[18px] w-[18px]"
+        aria-hidden="true"
+      >
+        <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="10" cy="7" r="4" />
+        <path d="M20 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+  },
 ] as const;
 
 export default function NavLinks({ role }: NavLinksProps) {
@@ -61,8 +84,7 @@ export default function NavLinks({ role }: NavLinksProps) {
   );
 
   return (
-    <nav
-      aria-label="เมนูหลัก"
+    <div
       className="flex items-center gap-1"
     >
       {visibleItems.map((item) => {
@@ -91,10 +113,9 @@ export default function NavLinks({ role }: NavLinksProps) {
               outline-none focus-visible:ring-4
               focus-visible:ring-[#b42332]/15
               sm:px-4
-              ${
-                active
-                  ? "bg-[#fff0f0] text-[#b42332]"
-                  : "text-[var(--muted)] hover:bg-[#fff5e8] hover:text-[var(--heading)]"
+              ${active
+                ? "bg-[#fff0f0] text-[#b42332]"
+                : "text-[var(--muted)] hover:bg-[#fff5e8] hover:text-[var(--heading)]"
               }
             `}
           >
@@ -109,10 +130,14 @@ export default function NavLinks({ role }: NavLinksProps) {
 
             {item.icon}
 
-            <span>{item.label}</span>
+            <span>
+              {"teacherLabel" in item && role === "TEACHER"
+                ? item.teacherLabel
+                : item.label}
+            </span>
           </Link>
         );
       })}
-    </nav>
+    </div>
   );
 }

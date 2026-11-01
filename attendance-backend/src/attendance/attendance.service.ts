@@ -33,7 +33,21 @@ export class AttendanceService {
 
     const [enrollments, session] = await Promise.all([
       this.prisma.enrollment.findMany({
-        where: { classroomId },
+        where: {
+          classroomId,
+          OR: [
+            // นักเรียนที่ยังใช้งานอยู่
+            { student: { isActive: true } },
+            // หรือปิดใช้งานแล้ว แต่เคยถูกเช็คชื่อในวันนี้ (คงประวัติไว้)
+            {
+              student: {
+                records: {
+                  some: { session: { classroomId, date: day } },
+                },
+              },
+            },
+          ],
+        },
         include: { student: true },
         orderBy: { number: 'asc' },
       }),
@@ -61,6 +75,7 @@ export class AttendanceService {
       })),
     };
   }
+
 
   // บันทึกทั้งห้องในคำขอเดียว (กดซ้ำ/แก้ไขได้)
   async save(
