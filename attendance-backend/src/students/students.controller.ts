@@ -10,7 +10,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/roles.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
-import { StudentsService } from './students.service.js';
+import { StudentsService, type ImportRowInput } from './students.service.js';
 
 @Controller('students')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -60,5 +60,17 @@ export class StudentsController {
     },
   ) {
     return this.students.update(id, body);
+  }
+
+  @Post('import')
+  importRows(
+    @Body()
+    body: { classroomId: string; commit?: boolean; rows: ImportRowInput[] },
+  ) {
+    return this.students.importToClassroom(
+      body.classroomId,
+      body.rows,
+      body.commit === true,
+    );
   }
 }

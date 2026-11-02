@@ -5,9 +5,12 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createStudent, setStudentActive } from "./actions";
 import AddStudentModal, { type CreateStudentInput } from "./AddStudentModal";
+import ImportStudentsModal from "./ImportStudentsModal";
+import { classLabel, type Level } from "@/src/lib/classroom";
 
 export type ClassroomOption = {
     id: string;
+    level: Level;
     grade: number;
     room: number;
     academicYear: number;
@@ -118,7 +121,7 @@ export default function StudentsManager({
 
     const [classFilter, setClassFilter] = useState<ClassFilter>("ALL");
     const [showAddModal, setShowAddModal] = useState(false);
-
+    const [showImport, setShowImport] = useState(false);
     const [msg, setMsg] = useState<{
         ok: boolean;
         text: string;
@@ -237,7 +240,7 @@ export default function StudentsManager({
                 <StatCard
                     title="นักเรียนทั้งหมด"
                     value={students.length}
-                    detail="รายชื่อในระบบทั้งหมด"
+                    detail="รายชื่อทั้งหมดในระบบ"
                     icon={<UsersIcon />}
                     color="bg-[#fff0f1] text-[#b42332]"
                 />
@@ -246,7 +249,7 @@ export default function StudentsManager({
                     title="กำลังศึกษา"
                     value={activeCount}
                     detail="บัญชีที่เปิดใช้งาน"
-                    icon={<span className="text-xl">✓</span>}
+                    icon={<span className="text-xl font-bold">✓</span>}
                     color="bg-emerald-50 text-emerald-600"
                 />
 
@@ -254,55 +257,78 @@ export default function StudentsManager({
                     title="ปิดใช้งาน"
                     value={inactiveCount}
                     detail="บัญชีที่ถูกปิดใช้งาน"
-                    icon={<span className="text-xl">－</span>}
+                    icon={<span className="text-xl font-bold">－</span>}
                     color="bg-gray-100 text-gray-500"
                 />
 
                 <StatCard
                     title="ยังไม่เข้าชั้นเรียน"
                     value={unassignedCount}
-                    detail="นักเรียนที่ยังไม่มีห้อง"
+                    detail="นักเรียนที่ยังไม่มีห้องเรียน"
                     icon={<span className="text-xl">⌂</span>}
                     color="bg-amber-50 text-amber-600"
                 />
             </section>
 
             {/* ADD STUDENT */}
-            <section className={`${cardCls} overflow-hidden`}>
-                <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-5 sm:px-6">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#fff0f1] text-2xl font-bold text-[#b42332]">
+            <section className={`${cardCls} relative overflow-hidden`}>
+                <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[#fff0f1] blur-3xl" />
+
+                <div className="relative flex flex-col justify-between gap-5 px-5 py-6 sm:flex-row sm:items-center sm:px-7">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#b42332] to-[#821b29] text-3xl font-bold text-white shadow-lg shadow-[#b42332]/20">
                             +
                         </div>
 
                         <div>
-                            <h2 className="font-bold text-[var(--heading)]">
-                                เพิ่มนักเรียนใหม่
+                            <h2 className="text-lg font-extrabold tracking-tight text-[var(--heading)]">
+                                จัดการข้อมูลนักเรียน
                             </h2>
-                            <p className="mt-1 text-xs text-[var(--muted)]">
-                                เพิ่มข้อมูลนักเรียนเข้าสู่ระบบ
+                            <p className="mt-1 text-sm text-[var(--muted)]">
+                                เพิ่มรายชื่อใหม่หรือนำเข้าข้อมูลจาก Excel
                             </p>
                         </div>
                     </div>
 
-                    <button
+                    <div className="flex flex-wrap gap-3">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setMsg(null);
+                                setShowImport(true);
+                            }}
+                            className="
+                    inline-flex cursor-pointer items-center justify-center gap-2
+                    rounded-xl border border-[#ead6d2] bg-white
+                    px-5 py-3 text-sm font-bold text-[#8f2632]
+                    shadow-sm transition-all duration-200
+                    hover:-translate-y-0.5 hover:border-[#b42332]
+                    hover:bg-[#fff7f5] hover:shadow-md
+                "
+                        >
+                            <span className="text-lg">▤</span>
+                            นำเข้าจาก Excel
+                        </button>
 
-                        type="button"
-                        onClick={() => {
-                            setMsg(null);
-                            setShowAddModal(true)
-                        }}
-                        className="
-        inline-flex cursor-pointer items-center justify-center gap-2
-        rounded-xl bg-[image:var(--gradient-primary)]
-        px-5 py-3 text-sm font-bold !text-white
-        shadow-[var(--shadow-button)] transition-all
-        hover:-translate-y-0.5 hover:brightness-110
-      "
-                    >
-                        <span className="text-lg leading-none">+</span>
-                        เพิ่มนักเรียน
-                    </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setMsg(null);
+                                setShowAddModal(true);
+                            }}
+                            className="
+                    inline-flex cursor-pointer items-center justify-center gap-2
+                    rounded-xl bg-gradient-to-r from-[#b42332] to-[#8f1d2b]
+                    px-5 py-3 text-sm font-bold text-white
+                    shadow-[0_6px_18px_rgba(180,35,50,0.2)]
+                    transition-all duration-200
+                    hover:-translate-y-0.5 hover:brightness-110 hover:shadow-lg
+                "
+                        >
+                            <span className="text-xl leading-none">+</span>
+                            เพิ่มนักเรียน
+                        </button>
+                    </div>
                 </div>
             </section>
 
@@ -311,6 +337,18 @@ export default function StudentsManager({
                 classrooms={classrooms}
                 onClose={() => setShowAddModal(false)}
                 onSubmit={handleCreate}
+            />
+            <ImportStudentsModal
+                open={showImport}
+                classrooms={classrooms}
+                onClose={() => setShowImport(false)}
+                onImported={(s) => {
+                    setMsg({
+                        ok: true,
+                        text: `นำเข้าเรียบร้อย: สร้างใหม่ ${s.create} คน · อัปเดต ${s.update} คน`,
+                    });
+                    router.refresh();
+                }}
             />
 
             {/* MESSAGE */}
@@ -332,28 +370,36 @@ export default function StudentsManager({
 
             {/* STUDENT LIST */}
             <section className={`${cardCls} overflow-hidden`}>
-                <div className="space-y-4 border-b border-[var(--border)] p-5 sm:p-6">
+                <div className="space-y-5 border-b border-[var(--border)] p-5 sm:p-6">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
-                            <h2 className="text-lg font-extrabold text-[var(--heading)]">
-                                รายชื่อนักเรียน
-                            </h2>
-                            <p className="mt-1 text-xs text-[var(--muted)]">
-                                พบ {filtered.length.toLocaleString("th-TH")} จาก{" "}
+                            <div className="flex items-center gap-2">
+                                <h2 className="text-lg font-extrabold tracking-tight text-[var(--heading)]">
+                                    รายชื่อนักเรียน
+                                </h2>
+
+                                <span className="rounded-full bg-[#fff0f1] px-2.5 py-1 text-[10px] font-bold text-[#b42332]">
+                                    STUDENTS
+                                </span>
+                            </div>
+
+                            <p className="mt-1.5 text-xs text-[var(--muted)]">
+                                พบ{" "}
+                                <span className="font-bold text-[var(--heading)]">
+                                    {filtered.length.toLocaleString("th-TH")}
+                                </span>
+                                {" "}จาก{" "}
                                 {students.length.toLocaleString("th-TH")} คน
                             </p>
                         </div>
-
-                        <span className="rounded-full bg-[var(--badge-bg)] px-3 py-1.5 text-xs font-bold text-[var(--badge-text)]">
-                            STUDENTS
-                        </span>
                     </div>
 
-                    <div className="flex flex-col gap-3 lg:flex-row">
-                        <div className="relative flex-1">
+                    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_170px_auto]">
+                        <div className="relative">
                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]">
                                 <SearchIcon />
                             </span>
+
                             <input
                                 className={`${inputCls} pl-11`}
                                 placeholder="ค้นหารหัส ชื่อ หรือนามสกุล..."
@@ -364,7 +410,7 @@ export default function StudentsManager({
                         </div>
 
                         <select
-                            className={`${inputCls} lg:w-56`}
+                            className={`${inputCls} cursor-pointer`}
                             value={classFilter}
                             onChange={(e) => setClassFilter(e.target.value)}
                             aria-label="กรองตามชั้นเรียน"
@@ -372,15 +418,17 @@ export default function StudentsManager({
                             <option value="ALL">ทุกชั้นเรียน</option>
                             {classrooms.map((c) => (
                                 <option key={c.id} value={c.id}>
-                                    ป.{c.grade}/{c.room} · ปี {c.academicYear} (
+                                    {classLabel(c)} · ปี {c.academicYear} (
                                     {countByClass.get(c.id) ?? 0})
                                 </option>
                             ))}
-                            <option value="NONE">ยังไม่เข้าชั้นเรียน ({unassignedCount})</option>
+                            <option value="NONE">
+                                ยังไม่เข้าชั้นเรียน ({unassignedCount})
+                            </option>
                         </select>
 
                         <select
-                            className={`${inputCls} lg:w-44`}
+                            className={`${inputCls} cursor-pointer`}
                             value={filter}
                             onChange={(e) => setFilter(e.target.value as FilterType)}
                             aria-label="กรองสถานะนักเรียน"
@@ -394,20 +442,26 @@ export default function StudentsManager({
                             <button
                                 type="button"
                                 onClick={resetFilters}
-                                className="cursor-pointer whitespace-nowrap rounded-xl border border-[var(--border)] px-4 py-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:bg-[var(--surface-soft)]"
+                                className="
+                    cursor-pointer whitespace-nowrap rounded-xl
+                    border border-[#eadbd8] bg-white px-4 py-3
+                    text-sm font-semibold text-[#98777a]
+                    transition-all hover:border-[#b42332]
+                    hover:bg-[#fff7f5] hover:text-[#b42332]
+                "
                             >
+                                <span className="mr-1">↺</span>
                                 ล้างตัวกรอง
                             </button>
                         )}
                     </div>
-
                 </div>
 
                 {/* DESKTOP TABLE */}
                 <div className="hidden overflow-x-auto md:block">
                     <table className="w-full border-collapse text-left">
                         <thead>
-                            <tr className="bg-[var(--surface-soft)] text-[11px] font-bold tracking-wide text-[var(--muted)]">
+                            <tr className="bg-[#fff7f5] text-[11px] font-bold tracking-wide text-[#98777a]">
                                 <th className="px-6 py-4">นักเรียน</th>
                                 <th className="px-6 py-4">รหัสประจำตัว</th>
                                 <th className="px-6 py-4">ชั้นเรียน</th>
@@ -421,9 +475,12 @@ export default function StudentsManager({
                             {filtered.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="py-16 text-center text-[var(--muted)]">
-                                        {students.length === 0
-                                            ? "ยังไม่มีนักเรียนในระบบ"
-                                            : "ไม่พบนักเรียนที่ตรงกับเงื่อนไข"}
+                                        <div className="flex flex-col items-center gap-2">
+                                            <span className="text-3xl">🔎</span>
+                                            {students.length === 0
+                                                ? "ยังไม่มีนักเรียนในระบบ"
+                                                : "ไม่พบนักเรียนที่ตรงกับเงื่อนไข"}
+                                        </div>
                                     </td>
                                 </tr>
                             ) : (
@@ -439,7 +496,7 @@ export default function StudentsManager({
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <StudentAvatar name={s.firstName} />
-                                                    <span className="font-semibold text-[var(--heading)]">
+                                                    <span className="font-bold text-[var(--heading)]">
                                                         {s.firstName} {s.lastName}
                                                     </span>
                                                 </div>
@@ -451,8 +508,8 @@ export default function StudentsManager({
 
                                             <td className="px-6 py-4">
                                                 {enrollment ? (
-                                                    <span className="rounded-lg bg-[var(--badge-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--badge-text)]">
-                                                        ป.{enrollment.classroom.grade}/{enrollment.classroom.room}
+                                                    <span className="inline-flex rounded-lg border border-[#f0dedb] bg-[#fff7f5] px-3 py-1.5 text-xs font-semibold text-[#8f2632]">
+                                                        {classLabel(enrollment.classroom)}
                                                         {" · "}{enrollment.classroom.academicYear}
                                                     </span>
                                                 ) : (
@@ -462,19 +519,21 @@ export default function StudentsManager({
                                                 )}
                                             </td>
 
-                                            <td className="px-6 py-4 font-medium text-[var(--heading)]">
+                                            <td className="px-6 py-4 font-semibold text-[var(--heading)]">
                                                 {enrollment?.number ?? "-"}
                                             </td>
 
                                             <td className="px-6 py-4">
                                                 <span
-                                                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${s.isActive
+                                                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ${s.isActive
                                                         ? "bg-emerald-50 text-emerald-700"
                                                         : "bg-gray-100 text-gray-500"
                                                         }`}
                                                 >
-                                                    <span className={`h-1.5 w-1.5 rounded-full ${s.isActive ? "bg-emerald-500" : "bg-gray-400"
-                                                        }`} />
+                                                    <span
+                                                        className={`h-1.5 w-1.5 rounded-full ${s.isActive ? "bg-emerald-500" : "bg-gray-400"
+                                                            }`}
+                                                    />
                                                     {s.isActive ? "กำลังศึกษา" : "ปิดใช้งาน"}
                                                 </span>
                                             </td>
@@ -484,7 +543,7 @@ export default function StudentsManager({
                                                     type="button"
                                                     disabled={pending}
                                                     onClick={() => toggle(s)}
-                                                    className={`cursor-pointer rounded-lg border px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50 ${s.isActive
+                                                    className={`cursor-pointer rounded-lg border px-4 py-2 text-xs font-bold transition-all disabled:opacity-50 ${s.isActive
                                                         ? "border-red-200 text-red-600 hover:bg-red-50"
                                                         : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
                                                         }`}
@@ -501,9 +560,9 @@ export default function StudentsManager({
                 </div>
 
                 {/* MOBILE CARDS */}
-                <div className="space-y-3 p-4 md:hidden">
+                <div className="space-y-3 bg-[#fffdfc] p-4 md:hidden">
                     {filtered.length === 0 ? (
-                        <div className="py-12 text-center text-sm text-[var(--muted)]">
+                        <div className="rounded-2xl border border-dashed border-[var(--border)] py-12 text-center text-sm text-[var(--muted)]">
                             {students.length === 0
                                 ? "ยังไม่มีนักเรียนในระบบ"
                                 : "ไม่พบนักเรียนที่ค้นหา"}
@@ -515,13 +574,14 @@ export default function StudentsManager({
                             return (
                                 <article
                                     key={s.id}
-                                    className="rounded-xl border border-[var(--border)] bg-[#fffcfa] p-4"
+                                    className="rounded-2xl border border-[#eee0dd] bg-white p-4 shadow-[0_3px_12px_rgba(100,25,35,0.04)]"
                                 >
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="flex min-w-0 items-center gap-3">
                                             <StudentAvatar name={s.firstName} />
+
                                             <div className="min-w-0">
-                                                <h3 className="truncate text-sm font-bold text-[var(--heading)]">
+                                                <h3 className="truncate text-sm font-extrabold text-[var(--heading)]">
                                                     {s.firstName} {s.lastName}
                                                 </h3>
                                                 <p className="mt-1 text-xs font-semibold text-[var(--primary)]">
@@ -530,26 +590,33 @@ export default function StudentsManager({
                                             </div>
                                         </div>
 
-                                        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${s.isActive
-                                            ? "bg-emerald-50 text-emerald-700"
-                                            : "bg-gray-100 text-gray-500"
-                                            }`}>
+                                        <span
+                                            className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${s.isActive
+                                                ? "bg-emerald-50 text-emerald-700"
+                                                : "bg-gray-100 text-gray-500"
+                                                }`}
+                                        >
                                             {s.isActive ? "กำลังศึกษา" : "ปิดใช้งาน"}
                                         </span>
                                     </div>
 
-                                    <div className="mt-4 grid grid-cols-2 gap-3 rounded-lg bg-white p-3 text-xs">
+                                    <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-[#fffaf8] p-3">
                                         <div>
-                                            <p className="text-[var(--muted)]">ชั้นเรียน</p>
-                                            <p className="mt-1 font-semibold text-[var(--heading)]">
+                                            <p className="text-[11px] text-[var(--muted)]">
+                                                ชั้นเรียน
+                                            </p>
+                                            <p className="mt-1 text-sm font-bold text-[var(--heading)]">
                                                 {enrollment
-                                                    ? `ป.${enrollment.classroom.grade}/${enrollment.classroom.room}`
+                                                    ? classLabel(enrollment.classroom)
                                                     : "ยังไม่เข้าชั้น"}
                                             </p>
                                         </div>
+
                                         <div>
-                                            <p className="text-[var(--muted)]">เลขที่</p>
-                                            <p className="mt-1 font-semibold text-[var(--heading)]">
+                                            <p className="text-[11px] text-[var(--muted)]">
+                                                เลขที่
+                                            </p>
+                                            <p className="mt-1 text-sm font-bold text-[var(--heading)]">
                                                 {enrollment?.number ?? "-"}
                                             </p>
                                         </div>
@@ -559,7 +626,7 @@ export default function StudentsManager({
                                         type="button"
                                         disabled={pending}
                                         onClick={() => toggle(s)}
-                                        className={`mt-3 w-full cursor-pointer rounded-lg border px-3 py-2.5 text-xs font-bold transition-colors disabled:opacity-50 ${s.isActive
+                                        className={`mt-3 w-full cursor-pointer rounded-xl border px-3 py-2.5 text-xs font-bold transition-all disabled:opacity-50 ${s.isActive
                                             ? "border-red-200 text-red-600 hover:bg-red-50"
                                             : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
                                             }`}
@@ -571,9 +638,11 @@ export default function StudentsManager({
                         })
                     )}
                 </div>
-
-                <div className="border-t border-[var(--border)] bg-[#fffcfa] px-5 py-3 text-xs text-[var(--muted)]">
-                    แสดง {filtered.length.toLocaleString("th-TH")} รายการ
+                <div className="flex items-center justify-between border-t border-[var(--border)] bg-[#fffaf8] px-5 py-4 text-xs text-[var(--muted)]">
+                    <span>รายการนักเรียน</span>
+                    <span className="font-bold text-[var(--heading)]">
+                        {filtered.length.toLocaleString("th-TH")} รายการ
+                    </span>
                 </div>
             </section>
         </div>

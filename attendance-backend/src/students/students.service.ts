@@ -80,6 +80,32 @@ function profileData(p: Profile): ProfileData {
   return out;
 }
 
+export type ImportRowInput = {
+  number?: number | null;
+  studentCode?: string;
+  prefix?: string;
+  firstName?: string;
+  lastName?: string;
+  birthDate?: string;
+  fatherName?: string;
+  motherName?: string;
+  guardianName?: string;
+  phone?: string;
+};
+
+export type ImportRowResult = {
+  index: number;
+  studentCode: string;
+  name: string;
+  number: number | null;
+  action: 'create' | 'update' | 'error';
+  errors: string[];
+};
+
+const MAX_IMPORT_ROWS = 200;
+const blank = (v?: string) => (v && v.trim() ? v : undefined);
+const levelShort = (level: string) => (level === 'KINDERGARTEN' ? 'อ.' : 'ป.');
+
 @Injectable()
 export class StudentsService {
   constructor(private prisma: PrismaService) {}
@@ -171,4 +197,197 @@ export class StudentsService {
       },
     });
   }
+
+  // commit=false → ตรวจอย่างเดียว (ตัวอย่างผล), commit=true → บันทึกจริง
+  async importToClassroom(
+    classroomId: string,
+    rows: ImportRowInput[],
+    commit: boolean,
+  ) {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      throw new BadRequestException('ไม่มีข้อมูลให้นำเข้า');
+    }
+    if (rows.length > MAX_IMPORT_ROWS) {
+      throw new BadRequestException(
+        `นำเข้าได้ครั้งละไม่เกิน ${MAX_IMPORT_ROWS} แถว`,
+      );
+    }
+
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: classroomId },
+    });
+    if (!classroom) throw new NotFoundException('ไม่พบชั้นเรียน');
+
+    const codes = rows
+      .map((r) => r.studentCode?.trim())
+      .filter((c): c is string => !!c);
+
+    const [existing, inClass] = await Promise.all([
+      this.prisma.student.findMany({
+        where: { studentCode: { in: codes } },
+        select: {
+          id: true,
+          studentCode: true,
+          enrollments: {
+            select: {
+              classroomId: true,
+              classroom: {
+                select: {
+                  level: true,
+                  grade: true,
+                  room: true,
+                  academicYear: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.enrollment.findMany({
+        where: { classroomId },
+        select: { studentId: true, number: true },
+      }),
+    ]);
+
+    const byCode = new Map(existing.map((s) => [s.studentCode, s] as const));
+    const holderOf = new Map<number, string>();
+    for (const e of inClass) {
+      if (e.number !== null) holderOf.set(e.number, e.studentId);
+    }
+
+    const seenCodes = new Set<string>();
+    const seenNumbers = new Set<number>();
+    const valid: {
+      code: string;
+      firstName: string;
+      lastName: string;
+      number: number | null;
+      profile: ProfileData;
+    }[] = [];
+    const results: ImportRowResult[] = [];
+
+    rows.forEach((r, i) => {
+      const errors: string[] = [];
+      const code = r.studentCode?.trim() ?? '';
+      const firstName = r.firstName?.trim() ?? '';
+      const lastName = r.lastName?.trim() ?? '';
+
+      if (!code) errors.push('ไม่มีเลขประจำตัว');
+      if (!firstName) errors.push('ไม่มีชื่อ');
+      if (!lastName) errors.push('ไม่มีนามสกุล');
+
+      let number: number | null = null;
+      if (r.number !== undefined && r.number !== null) {
+        if (Number.isInteger(r.number) && r.number >= 1) number = r.number;
+        else errors.push('เลขที่ไม่ถูกต้อง');
+      }
+
+      let profile: ProfileData = {};
+      try {
+        profile = profileData({
+          prefix: blank(r.prefix),
+          birthDate: blank(r.birthDate),
+          fatherName: blank(r.fatherName),
+          motherName: blank(r.motherName),
+          guardianName: blank(r.guardianName),
+          phone: blank(r.phone),
+        });
+      } catch (e) {
+        errors.push((e as Error).message);
+      }
+
+      if (code) {
+        if (seenCodes.has(code)) errors.push('เลขประจำตัวซ้ำกันในข้อมูลที่วาง');
+        seenCodes.add(code);
+      }
+      if (number !== null) {
+        if (seenNumbers.has(number)) {
+          errors.push(`เลขที่ ${number} ซ้ำกันในข้อมูลที่วาง`);
+        }
+        seenNumbers.add(number);
+      }
+
+      const found = code ? byCode.get(code) : undefined;
+
+      // นักเรียนเดิมที่อยู่ชั้นอื่นในปีการศึกษาเดียวกัน
+      const clash = found?.enrollments.find(
+        (e) =>
+          e.classroomId !== classroomId &&
+          e.classroom.academicYear === classroom.academicYear,
+      );
+      if (clash) {
+        errors.push(
+          `อยู่ชั้น ${levelShort(clash.classroom.level)}${clash.classroom.grade}/${clash.classroom.room} ในปีการศึกษานี้แล้ว`,
+        );
+      }
+
+      if (number !== null) {
+        const holder = holderOf.get(number);
+        if (holder && holder !== found?.id) {
+          errors.push(`เลขที่ ${number} ถูกใช้แล้วในชั้นนี้`);
+        }
+      }
+
+      results.push({
+        index: i + 1,
+        studentCode: code,
+        name: `${firstName} ${lastName}`.trim(),
+        number,
+        action: errors.length > 0 ? 'error' : found ? 'update' : 'create',
+        errors,
+      });
+
+      if (errors.length === 0) {
+        valid.push({ code, firstName, lastName, number, profile });
+      }
+    });
+
+    if (commit && valid.length > 0) {
+      await this.prisma.$transaction(
+        async (tx) => {
+          for (const v of valid) {
+            const student = await tx.student.upsert({
+              where: { studentCode: v.code },
+              create: {
+                studentCode: v.code,
+                firstName: v.firstName,
+                lastName: v.lastName,
+                ...v.profile,
+              },
+              // ฟิลด์ที่ไม่ได้ส่งมา (undefined) จะไม่ถูกแตะ ข้อมูลเดิมไม่ถูกลบ
+              update: {
+                firstName: v.firstName,
+                lastName: v.lastName,
+                ...v.profile,
+              },
+              select: { id: true },
+            });
+
+            await tx.enrollment.upsert({
+              where: {
+                studentId_classroomId: { studentId: student.id, classroomId },
+              },
+              create: { studentId: student.id, classroomId, number: v.number },
+              update: v.number !== null ? { number: v.number } : {},
+            });
+          }
+        },
+        { timeout: 30_000 },
+      );
+    }
+
+    const count = (a: ImportRowResult['action']) =>
+      results.filter((r) => r.action === a).length;
+
+    return {
+      committed: commit && valid.length > 0,
+      summary: {
+        create: count('create'),
+        update: count('update'),
+        error: count('error'),
+      },
+      rows: results,
+    };
+  }
+
 }

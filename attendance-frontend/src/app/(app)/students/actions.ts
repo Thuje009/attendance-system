@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { api } from "@/src/lib/api";
+import type { ImportResponse, ImportRow } from "@/src/lib/studentImport";
+import { unstable_rethrow } from "next/navigation";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -35,4 +37,25 @@ export async function setStudentActive(id: string, isActive: boolean) {
       body: JSON.stringify({ isActive }),
     }),
   );
+}
+
+export async function importStudents(
+  classroomId: string,
+  rows: ImportRow[],
+  commit: boolean,
+): Promise<{ ok: true; data: ImportResponse } | { ok: false; error: string }> {
+  try {
+    const data = await api<ImportResponse>("/students/import", {
+      method: "POST",
+      body: JSON.stringify({ classroomId, rows, commit }),
+    });
+    if (commit) {
+      revalidatePath("/students");
+      revalidatePath("/classrooms");
+    }
+    return { ok: true, data };
+  } catch (e) {
+    unstable_rethrow(e); // ให้ redirect ไป /login ทำงานเมื่อ token หมดอายุ
+    return { ok: false, error: (e as Error).message };
+  }
 }

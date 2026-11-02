@@ -261,9 +261,11 @@ export default function AddStudentModal({
               disabled={pending}
             >
               <option value="">ยังไม่กำหนดห้องเรียน</option>
+
               {classrooms.map((c) => (
                 <option key={c.id} value={c.id}>
-                  ป.{c.grade}/{c.room} · ปีการศึกษา {c.academicYear}
+                  {c.level === "KINDERGARTEN" ? "อ." : "ป."}
+                  {c.grade}/{c.room} · ปีการศึกษา {c.academicYear}
                 </option>
               ))}
             </select>
@@ -302,11 +304,10 @@ export default function AddStudentModal({
           <div
             role="status"
             aria-live="polite"
-            className={`rounded-xl border px-4 py-3 text-sm font-medium ${
-              msg.ok
-                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                : "border-red-200 bg-red-50 text-red-700"
-            }`}
+            className={`rounded-xl border px-4 py-3 text-sm font-medium ${msg.ok
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border-red-200 bg-red-50 text-red-700"
+              }`}
           >
             {msg.text}
           </div>

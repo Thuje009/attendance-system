@@ -2,14 +2,17 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { api } from "@/src/lib/api";
+import { Level } from "@/src/lib/classroom";
 
 type Classroom = {
   id: string;
+  level: Level;
   grade: number;
   room: number;
   academicYear: number;
   _count: { enrollments: number };
 };
+
 
 function ClassListSkeleton() {
   return (
@@ -100,16 +103,20 @@ async function ClassList() {
               </span>
             </div>
 
+
             <div className="relative mt-5">
               <p className="text-xs font-semibold tracking-wide text-[var(--muted)]">
                 ชั้นเรียนที่รับผิดชอบ
               </p>
+
               <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-[var(--heading)]">
-                ป.{c.grade}
+                {c.level === "KINDERGARTEN" ? "อ." : "ป."}
+                {c.grade}
                 <span className="mx-1 text-[#d8b8b5]">/</span>
                 {c.room}
               </h2>
             </div>
+
 
             <div className="relative mt-5 flex items-center justify-between rounded-xl bg-[#fff8f4] px-3.5 py-3">
               <div className="flex items-center gap-2.5">
