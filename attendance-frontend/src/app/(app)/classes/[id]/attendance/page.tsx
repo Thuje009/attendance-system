@@ -4,11 +4,16 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { api } from "@/src/lib/api";
 import AttendanceForm from "./AttendanceForm";
-
+import { classLabel } from "@/src/lib/classroom";
 
 type Data = {
   date: string;
   checked: boolean;
+  classroom: {
+    level: "KINDERGARTEN" | "PRIMARY";
+    grade: number;
+    room: number;
+  };
   students: {
     studentId: string;
     number: number | null;
@@ -235,10 +240,13 @@ async function AttendanceContent({
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
             </div>
-
+            
             <div>
               <h2 className="text-base font-extrabold text-[var(--heading)] sm:text-lg">
                 รายชื่อนักเรียน
+                <span className="ml-2 text-[var(--primary)]">
+                  ชั้น {classLabel(data.classroom)}
+                </span>
               </h2>
 
               <p className="mt-1 text-xs text-[var(--muted)]">

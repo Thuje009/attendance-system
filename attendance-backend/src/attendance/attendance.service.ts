@@ -27,54 +27,77 @@ export class AttendanceService {
   ) {}
 
   // ดึงรายชื่อทั้งห้อง พร้อมสถานะของวันนั้น (ยังไม่เช็ก = status เป็น null)
-  async getByDate(classroomId: string, date: string, user: User) {
-    await this.classrooms.assertAccess(classroomId, user);
-    const day = parseDate(date);
 
-    const [enrollments, session] = await Promise.all([
-      this.prisma.enrollment.findMany({
-        where: {
-          classroomId,
-          OR: [
-            // นักเรียนที่ยังใช้งานอยู่
-            { student: { isActive: true } },
-            // หรือปิดใช้งานแล้ว แต่เคยถูกเช็คชื่อในวันนี้ (คงประวัติไว้)
-            {
-              student: {
-                records: {
-                  some: { session: { classroomId, date: day } },
-                },
+async getByDate(classroomId: string, date: string, user: User) {
+  await this.classrooms.assertAccess(classroomId, user);
+  const day = parseDate(date);
+
+  const [classroom, enrollments, session] = await Promise.all([
+    this.prisma.classroom.findUnique({
+      where: { id: classroomId },
+      select: {
+        level: true,
+        grade: true,
+        room: true,
+      },
+    }),
+
+    this.prisma.enrollment.findMany({
+      where: {
+        classroomId,
+        OR: [
+          { student: { isActive: true } },
+          {
+            student: {
+              records: {
+                some: { session: { classroomId, date: day } },
               },
             },
-          ],
-        },
-        include: { student: true },
-        orderBy: { number: 'asc' },
-      }),
-      this.prisma.attendanceSession.findUnique({
-        where: { classroomId_date: { classroomId, date: day } },
-        include: { records: true },
-      }),
-    ]);
+          },
+        ],
+      },
+      include: { student: true },
+      orderBy: { number: "asc" },
+    }),
 
-    const recordMap = new Map(
-      (session?.records ?? []).map((r) => [r.studentId, r]),
-    );
+    this.prisma.attendanceSession.findUnique({
+      where: {
+        classroomId_date: { classroomId, date: day },
+      },
+      include: { records: true },
+    }),
+  ]);
 
-    return {
-      date,
-      checked: !!session,
-      students: enrollments.map((e) => ({
-        studentId: e.studentId,
-        number: e.number,
-        studentCode: e.student.studentCode,
-        firstName: e.student.firstName,
-        lastName: e.student.lastName,
-        status: recordMap.get(e.studentId)?.status ?? null,
-        note: recordMap.get(e.studentId)?.note ?? null,
-      })),
-    };
+  if (!classroom) {
+    throw new BadRequestException("ไม่พบชั้นเรียน");
   }
+
+  const recordMap = new Map(
+    (session?.records ?? []).map((r) => [r.studentId, r]),
+  );
+
+  return {
+    date,
+    checked: !!session,
+
+    // เพิ่มข้อมูลชั้นเรียน
+    classroom: {
+      level: classroom.level,
+      grade: classroom.grade,
+      room: classroom.room,
+    },
+
+    students: enrollments.map((e) => ({
+      studentId: e.studentId,
+      number: e.number,
+      studentCode: e.student.studentCode,
+      firstName: e.student.firstName,
+      lastName: e.student.lastName,
+      status: recordMap.get(e.studentId)?.status ?? null,
+      note: recordMap.get(e.studentId)?.note ?? null,
+    })),
+  };
+}
 
 
   // บันทึกทั้งห้องในคำขอเดียว (กดซ้ำ/แก้ไขได้)

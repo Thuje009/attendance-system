@@ -3,10 +3,11 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createStudent, setStudentActive } from "./actions";
+import { createStudent, setStudentActive, updateStudent } from "./actions";
 import AddStudentModal, { type CreateStudentInput } from "./AddStudentModal";
 import ImportStudentsModal from "./ImportStudentsModal";
 import { classLabel, type Level } from "@/src/lib/classroom";
+import EditStudentModal, { type UpdateStudentInput } from "./EditStudentModal";
 
 export type ClassroomOption = {
     id: string;
@@ -19,8 +20,14 @@ export type ClassroomOption = {
 export type StudentRow = {
     id: string;
     studentCode: string;
+    prefix: string | null;
     firstName: string;
     lastName: string;
+    birthDate: string | null; // ISO จาก backend (เช่น "2022-07-10T00:00:00.000Z")
+    fatherName: string | null;
+    motherName: string | null;
+    guardianName: string | null;
+    phone: string | null;
     isActive: boolean;
     enrollments: {
         number: number | null;
@@ -122,6 +129,8 @@ export default function StudentsManager({
     const [classFilter, setClassFilter] = useState<ClassFilter>("ALL");
     const [showAddModal, setShowAddModal] = useState(false);
     const [showImport, setShowImport] = useState(false);
+    const [editing, setEditing] = useState<StudentRow | null>(null);
+
     const [msg, setMsg] = useState<{
         ok: boolean;
         text: string;
@@ -173,6 +182,14 @@ export default function StudentsManager({
             router.refresh();
         }
 
+        return res;
+    };
+    const handleUpdate = async (id: string, input: UpdateStudentInput) => {
+        const res = await updateStudent(id, input);
+        if (res.ok) {
+            setMsg({ ok: true, text: "บันทึกการแก้ไขเรียบร้อยแล้ว" });
+            router.refresh();
+        }
         return res;
     };
 
@@ -350,6 +367,16 @@ export default function StudentsManager({
                     router.refresh();
                 }}
             />
+
+            {editing && (
+                <EditStudentModal
+                    key={editing.id}
+                    student={editing}
+                    classrooms={classrooms}
+                    onClose={() => setEditing(null)}
+                    onSubmit={handleUpdate}
+                />
+            )}
 
             {/* MESSAGE */}
             {msg && (
@@ -539,17 +566,31 @@ export default function StudentsManager({
                                             </td>
 
                                             <td className="px-6 py-4 text-right">
-                                                <button
-                                                    type="button"
-                                                    disabled={pending}
-                                                    onClick={() => toggle(s)}
-                                                    className={`cursor-pointer rounded-lg border px-4 py-2 text-xs font-bold transition-all disabled:opacity-50 ${s.isActive
-                                                        ? "border-red-200 text-red-600 hover:bg-red-50"
-                                                        : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                                                        }`}
-                                                >
-                                                    {s.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
-                                                </button>
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        type="button"
+                                                        disabled={pending}
+                                                        onClick={() => {
+                                                            setMsg(null);
+                                                            setEditing(s);
+                                                        }}
+                                                        className="cursor-pointer rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--heading)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                                    >
+                                                        แก้ไข
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        disabled={pending}
+                                                        onClick={() => toggle(s)}
+                                                        className={`cursor-pointer rounded-lg border px-4 py-2 text-xs font-bold transition-all disabled:opacity-50 ${s.isActive
+                                                            ? "border-red-200 text-red-600 hover:bg-red-50"
+                                                            : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                                                            }`}
+                                                    >
+                                                        {s.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );

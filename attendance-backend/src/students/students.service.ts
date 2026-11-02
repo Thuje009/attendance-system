@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service.js';
+import type { Prisma } from '@prisma/client';
 
 type Profile = {
   prefix?: string;
@@ -23,12 +24,19 @@ type CreateInput = Profile & {
   number?: number;
 };
 
-type UpdateInput = Profile & {
+export type Placement = {
+  classroomId: string | null; // null = เอาออกจากชั้นเรียน
+  number?: number | null;
+  from?: string | null; // ชั้นที่จะเอาออก (ใช้ตอน classroomId เป็น null)
+};
+
+export type UpdateInput = Profile & {
+  studentCode?: string;
   firstName?: string;
   lastName?: string;
   isActive?: boolean;
+  placement?: Placement;
 };
-
 type ProfileData = {
   prefix?: string | null;
   birthDate?: Date | null;
@@ -187,14 +195,126 @@ export class StudentsService {
     const student = await this.prisma.student.findUnique({ where: { id } });
     if (!student) throw new NotFoundException('ไม่พบนักเรียน');
 
-    return this.prisma.student.update({
-      where: { id },
-      data: {
-        firstName: data.firstName?.trim() || undefined,
-        lastName: data.lastName?.trim() || undefined,
-        isActive: data.isActive,
-        ...profileData(data),
+    const studentCode = data.studentCode?.trim();
+    const firstName = data.firstName?.trim();
+    const lastName = data.lastName?.trim();
+
+    if (
+      (data.studentCode !== undefined && !studentCode) ||
+      (data.firstName !== undefined && !firstName) ||
+      (data.lastName !== undefined && !lastName)
+    ) {
+      throw new BadRequestException('เลขประจำตัว ชื่อ และนามสกุลต้องไม่ว่าง');
+    }
+
+    if (studentCode && studentCode !== student.studentCode) {
+      const dup = await this.prisma.student.findUnique({
+        where: { studentCode },
+      });
+      if (dup) throw new ConflictException('รหัสประจำตัวนี้มีอยู่แล้ว');
+    }
+
+    const profile = profileData(data);
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const updated = await tx.student.update({
+          where: { id },
+          data: {
+            studentCode,
+            firstName,
+            lastName,
+            isActive: data.isActive,
+            ...profile,
+          },
+        });
+
+        if (data.placement) {
+          await this.applyPlacement(tx, id, data.placement);
+        }
+        return updated;
       },
+      { timeout: 15_000 },
+    );
+  }
+
+  // ถ้ามีประวัติเช็คชื่อในชั้นนั้น ห้ามย้ายออก ไม่งั้นประวัติจะหายจากรายงานของชั้นนั้น
+  private async assertNoHistory(
+    tx: Prisma.TransactionClient,
+    studentId: string,
+    classroomId: string,
+  ) {
+    const count = await tx.attendanceRecord.count({
+      where: { studentId, session: { classroomId } },
+    });
+    if (count > 0) {
+      throw new ConflictException(
+        `ย้ายออกจากชั้นเดิมไม่ได้ เพราะนักเรียนมีประวัติเช็คชื่อในชั้นนั้นแล้ว ${count} ครั้ง (ถ้านักเรียนออกจากโรงเรียน ให้ใช้ "ปิดใช้งาน" แทน)`,
+      );
+    }
+  }
+
+  private async applyPlacement(
+    tx: Prisma.TransactionClient,
+    studentId: string,
+    p: Placement,
+  ) {
+    // เอาออกจากชั้นเรียน
+    if (p.classroomId === null) {
+      if (!p.from) return;
+      await this.assertNoHistory(tx, studentId, p.from);
+      await tx.enrollment.deleteMany({
+        where: { studentId, classroomId: p.from },
+      });
+      return;
+    }
+
+    const number = p.number ?? null;
+    if (number !== null && (!Number.isInteger(number) || number < 1)) {
+      throw new BadRequestException('เลขที่ต้องเป็นจำนวนเต็มตั้งแต่ 1 ขึ้นไป');
+    }
+
+    const target = await tx.classroom.findUnique({
+      where: { id: p.classroomId },
+    });
+    if (!target) throw new NotFoundException('ไม่พบชั้นเรียน');
+
+    if (number !== null) {
+      const taken = await tx.enrollment.findFirst({
+        where: { classroomId: target.id, number, NOT: { studentId } },
+      });
+      if (taken) {
+        throw new ConflictException(`เลขที่ ${number} ถูกใช้แล้วในชั้นนี้`);
+      }
+    }
+
+    // อยู่ได้ 1 ชั้นต่อปีการศึกษา: มีชั้นอื่นในปีเดียวกันอยู่ = ย้าย
+    const sameYear = await tx.enrollment.findFirst({
+      where: {
+        studentId,
+        classroom: { academicYear: target.academicYear },
+        NOT: { classroomId: target.id },
+      },
+      select: { classroomId: true },
+    });
+    if (sameYear) {
+      await this.assertNoHistory(tx, studentId, sameYear.classroomId);
+      await tx.enrollment.delete({
+        where: {
+          studentId_classroomId: {
+            studentId,
+            classroomId: sameYear.classroomId,
+          },
+        },
+      });
+    }
+
+    await tx.enrollment.upsert({
+      where: {
+        studentId_classroomId: { studentId, classroomId: target.id },
+      },
+      create: { studentId, classroomId: target.id, number },
+      update: { number },
     });
   }
 

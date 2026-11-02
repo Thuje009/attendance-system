@@ -10,13 +10,17 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/roles.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
-import { StudentsService, type ImportRowInput } from './students.service.js';
+import {
+  StudentsService,
+  type ImportRowInput,
+  type UpdateInput,
+} from './students.service.js';
 
 @Controller('students')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN') // ข้อมูลนักเรียนทั้งโรงเรียน เฉพาะแอดมิน
 export class StudentsController {
-  constructor(private readonly students: StudentsService) {}
+  constructor(private readonly students: StudentsService) { }
 
   @Get()
   findAll() {
@@ -44,21 +48,7 @@ export class StudentsController {
   }
 
   @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body()
-    body: {
-      firstName?: string;
-      lastName?: string;
-      isActive?: boolean;
-      prefix?: string;
-      birthDate?: string;
-      fatherName?: string;
-      motherName?: string;
-      guardianName?: string;
-      phone?: string;
-    },
-  ) {
+  update(@Param('id') id: string, @Body() body: UpdateInput) {
     return this.students.update(id, body);
   }
 

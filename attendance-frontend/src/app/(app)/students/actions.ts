@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { api } from "@/src/lib/api";
 import type { ImportResponse, ImportRow } from "@/src/lib/studentImport";
 import { unstable_rethrow } from "next/navigation";
+import type { UpdateStudentInput } from "./EditStudentModal";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -57,5 +58,28 @@ export async function importStudents(
   } catch (e) {
     unstable_rethrow(e); // ให้ redirect ไป /login ทำงานเมื่อ token หมดอายุ
     return { ok: false, error: (e as Error).message };
+  }
+
+
+}
+
+export async function updateStudent(
+  id: string,
+  input: UpdateStudentInput
+) {
+  try {
+    return await run(() =>
+      api(`/students/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(input),
+      })
+    );
+  } catch (e) {
+    unstable_rethrow(e);
+
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "เกิดข้อผิดพลาด",
+    };
   }
 }
