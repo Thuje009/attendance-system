@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 
@@ -12,6 +12,7 @@ import {
   removeTeacher,
 } from "./actions";
 import { gradeLimit, LEVEL_LONG, type Level } from "@/src/lib/classroom";
+import PromotionModal from "./PromotionModal";
 
 export type AdminClassroom = {
   id: string;
@@ -140,7 +141,7 @@ function StatCard({
 }
 
 export default function ClassroomsManager({
-  classrooms,
+  classrooms: allClassrooms,
   teachers,
   defaultYear,
 }: {
@@ -148,6 +149,29 @@ export default function ClassroomsManager({
   teachers: TeacherOption[];
   defaultYear: number;
 }) {
+  const years = useMemo(
+    () =>
+      [...new Set(allClassrooms.map((c) => c.academicYear))].sort(
+        (a, b) => b - a,
+      ),
+    [allClassrooms],
+  );
+  const [selectedYear, setSelectedYear] = useState<number | null>(
+    years[0] ?? null,
+  );
+  const activeYear =
+    selectedYear !== null && years.includes(selectedYear)
+      ? selectedYear
+      : (years[0] ?? null);
+  const classrooms = useMemo(
+    () =>
+      activeYear === null
+        ? allClassrooms
+        : allClassrooms.filter((c) => c.academicYear === activeYear),
+    [allClassrooms, activeYear],
+  );
+  const [showPromotion, setShowPromotion] = useState(false);
+
   const [grade, setGrade] = useState(1);
   const [room, setRoom] = useState(1);
   const [year, setYear] = useState(defaultYear);
@@ -417,15 +441,32 @@ export default function ClassroomsManager({
       )}
 
       {/* CLASSROOM LIST HEADER */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-extrabold text-[var(--heading)]">
-            รายการชั้นเรียน
-          </h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            จัดการครูประจำชั้นและรายละเอียดห้องเรียน
-          </p>
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {years.length > 0 && (
+          <select
+            aria-label="เลือกปีการศึกษา"
+            className="rounded-xl border border-[var(--border)] bg-white px-4 py-2 text-xs font-bold text-[var(--heading)] outline-none focus:border-[var(--primary)]"
+            value={activeYear ?? ""}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>
+                ปีการศึกษา {y}
+              </option>
+            ))}
+          </select>
+        )}
+
+        <button
+          type="button"
+          onClick={() => {
+            setMsg(null);
+            setShowPromotion(true);
+          }}
+          className="cursor-pointer rounded-xl border border-[var(--border)] bg-white px-4 py-2 text-xs font-bold text-[var(--heading)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+        >
+          เลื่อนชั้นขึ้นปีใหม่
+        </button>
 
         <span className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-xs font-bold text-[var(--heading)]">
           ทั้งหมด {classrooms.length} ห้อง
@@ -664,6 +705,14 @@ export default function ClassroomsManager({
             );
           })}
         </div>
+      )}
+
+      {showPromotion && (
+        <PromotionModal
+          years={years}
+          onClose={() => setShowPromotion(false)}
+          onViewYear={(y) => setSelectedYear(y)}
+        />
       )}
     </div>
   );

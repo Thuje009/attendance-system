@@ -8,10 +8,13 @@ import { UsersModule } from './users/users.module.js';
 import { ClassroomsModule } from './classrooms/classrooms.module.js';
 import { AttendanceModule } from './attendance/attendance.module.js';
 import { ReportsModule } from './reports/reports.module.js';
+import { PromotionService } from './promotion/promotion.service.js';
+import { PromotionController } from './promotion/promotion.controller.js';
+import { PromotionModule } from './promotion/promotion.module.js';
 
 @Module({
-  imports: [PrismaModule, StudentsModule, AuthModule, UsersModule, ClassroomsModule, AttendanceModule, ReportsModule],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [PrismaModule, StudentsModule, AuthModule, UsersModule, ClassroomsModule, AttendanceModule, ReportsModule, PromotionModule],
+  controllers: [AppController, PromotionController],
+  providers: [AppService, PromotionService],
 })
 export class AppModule {}

@@ -117,6 +117,13 @@ function StudentAvatar({ name }: { name: string }) {
     );
 }
 
+// ชั้นเรียนของนักเรียนในปีการศึกษาที่เลือก
+function enrollmentIn(s: StudentRow, year: number | null) {
+    return year === null
+        ? s.enrollments[0]
+        : s.enrollments.find((e) => e.classroom.academicYear === year);
+}
+
 export default function StudentsManager({
     students,
     classrooms,
@@ -140,10 +147,21 @@ export default function StudentsManager({
     const [filter, setFilter] = useState<FilterType>("ALL");
     const [pending, start] = useTransition();
 
+    const years = useMemo(
+        () =>
+            [...new Set(classrooms.map((c) => c.academicYear))].sort(
+                (a, b) => b - a,
+            ),
+        [classrooms],
+    );
+    const [year, setYear] = useState<number | null>(years[0] ?? null);
+    const activeYear =
+        year !== null && years.includes(year) ? year : (years[0] ?? null);
+
     const activeCount = students.filter((s) => s.isActive).length;
     const inactiveCount = students.length - activeCount;
     const unassignedCount = students.filter(
-        (s) => !s.enrollments[0],
+        (s) => s.isActive && !enrollmentIn(s, activeYear),
     ).length;
 
     const filtered = useMemo(() => {
@@ -161,15 +179,17 @@ export default function StudentsManager({
                 (filter === "ACTIVE" && s.isActive) ||
                 (filter === "INACTIVE" && !s.isActive);
 
-            const currentClassId = s.enrollments[0]?.classroom.id;
+            // ดึงห้องเรียนของปีการศึกษาที่เลือก
+            const currentClassId = enrollmentIn(s, activeYear)?.classroom.id;
+
             const matchesClass =
                 classFilter === "ALL" ||
-                (classFilter === "NONE" && !currentClassId) ||
+                (classFilter === "NONE" && s.isActive && !currentClassId) ||
                 currentClassId === classFilter;
 
             return matchesSearch && matchesStatus && matchesClass;
         });
-    }, [students, query, filter, classFilter]);
+    }, [students, query, filter, classFilter, activeYear]);
 
     const handleCreate = async (input: CreateStudentInput) => {
         const res = await createStudent(input);
@@ -435,24 +455,44 @@ export default function StudentsManager({
                                 aria-label="ค้นหานักเรียน"
                             />
                         </div>
+                        <div className="flex flex-col gap-3 sm:flex-row">
 
-                        <select
-                            className={`${inputCls} cursor-pointer`}
-                            value={classFilter}
-                            onChange={(e) => setClassFilter(e.target.value)}
-                            aria-label="กรองตามชั้นเรียน"
-                        >
-                            <option value="ALL">ทุกชั้นเรียน</option>
-                            {classrooms.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                    {classLabel(c)} · ปี {c.academicYear} (
-                                    {countByClass.get(c.id) ?? 0})
+                            {/* กรองตามชั้นเรียน */}
+                            <select
+                                className={`${inputCls} cursor-pointer`}
+                                value={classFilter}
+                                onChange={(e) => setClassFilter(e.target.value)}
+                                aria-label="กรองตามชั้นเรียน"
+                            >
+                                <option value="ALL">ทุกชั้นเรียน</option>
+
+                                <option value="NONE">
+                                    ยังไม่เข้าชั้นเรียน ({unassignedCount})
                                 </option>
-                            ))}
-                            <option value="NONE">
-                                ยังไม่เข้าชั้นเรียน ({unassignedCount})
-                            </option>
-                        </select>
+
+                                {/* เพิ่มรายการชั้นเรียนตรงนี้ ถ้ามี */}
+                            </select>
+
+                            {/* กรองตามปีการศึกษา */}
+                            {years.length > 0 && (
+                                <select
+                                    className={`${inputCls} cursor-pointer sm:w-44`}
+                                    value={activeYear ?? ""}
+                                    onChange={(e) => {
+                                        setYear(Number(e.target.value));
+                                        setClassFilter("ALL");
+                                    }}
+                                    aria-label="กรองตามปีการศึกษา"
+                                >
+                                    {years.map((y) => (
+                                        <option key={y} value={y}>
+                                            ปีการศึกษา {y}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+
+                        </div>
 
                         <select
                             className={`${inputCls} cursor-pointer`}

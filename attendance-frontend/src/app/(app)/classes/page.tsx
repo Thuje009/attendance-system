@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { api } from "@/src/lib/api";
 import { Level } from "@/src/lib/classroom";
+import YearTabs from "@/src/components/YearTabs";
 
 type Classroom = {
   id: string;
@@ -32,10 +33,21 @@ function ClassListSkeleton() {
   );
 }
 
-async function ClassList() {
-  const classes = await api<Classroom[]>("/classrooms/mine");
+async function ClassList({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string }>;
+}) {
+  const all = await api<Classroom[]>("/classrooms/mine");
+  const { year } = await searchParams;
 
-  if (classes.length === 0) {
+  const years = [...new Set(all.map((c) => c.academicYear))].sort(
+    (a, b) => b - a,
+  );
+  const selected = years.includes(Number(year)) ? Number(year) : years[0];
+  const classes = all.filter((c) => c.academicYear === selected);
+
+  if (all.length === 0) {
     return (
       <div className="overflow-hidden rounded-3xl border border-dashed border-[var(--border)] bg-white px-6 py-14 text-center shadow-[0_8px_32px_rgba(130,28,41,0.035)] sm:px-10">
         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[#fff1e9] text-[#b42332]">
@@ -63,6 +75,7 @@ async function ClassList() {
 
   return (
     <>
+      <YearTabs years={years} selected={selected} basePath="/classes" />
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-[var(--muted)]">
           เลือกชั้นเรียนเพื่อเข้าสู่ระบบเช็กชื่อ
@@ -170,7 +183,11 @@ async function ClassList() {
   );
 }
 
-export default function ClassesPage() {
+export default function ClassesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string }>;
+}) {
   return (
     <main className="min-h-[calc(100vh-76px)] bg-[var(--background)]">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
@@ -223,7 +240,7 @@ export default function ClassesPage() {
           </div>
 
           <Suspense fallback={<ClassListSkeleton />}>
-            <ClassList />
+            <ClassList searchParams={searchParams} />
           </Suspense>
         </section>
       </div>

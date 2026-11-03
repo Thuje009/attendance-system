@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { api } from "@/src/lib/api";
+import YearTabs from "@/src/components/YearTabs";
 import ClassroomsManager, {
   type AdminClassroom,
   type TeacherOption,
