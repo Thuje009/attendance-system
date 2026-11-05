@@ -28,3 +28,6 @@ Thumbs.db
 # ไฟล์ข้อมูลนักเรียนจริง ห้าม commit
 *.xlsx
 *.xls
+
+backups/
+*.dump
