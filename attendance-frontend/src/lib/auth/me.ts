@@ -7,7 +7,9 @@ export type CurrentUser = {
   username: string;
   fullName: string;
   role: UserRole;
+  mustChangePassword: boolean;
 };
+
 export async function getCurrentUser(): Promise<CurrentUser> {
   return api<CurrentUser>("/auth/me");
 }

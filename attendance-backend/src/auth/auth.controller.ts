@@ -1,27 +1,50 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { AuthService } from './auth.service.js';
 import { PrismaService } from '../prisma.service.js';
+import { AuthService } from './auth.service.js';
+import { JwtAuthGuard } from './jwt-auth.guard.js';
+import { AllowPasswordChange } from './password-change.decorator.js';
+
+type AuthReq = { user: { id: string; role: string } };
 
 @Controller('auth')
 export class AuthController {
- constructor(
+  constructor(
     private auth: AuthService,
     private prisma: PrismaService,
   ) {}
 
   @Post('login')
   login(@Body() body: { username: string; password: string }) {
-    return this.auth.login(body.username, body.password);
+    return this.auth.login(body?.username, body?.password);
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @AllowPasswordChange()
+  @UseGuards(JwtAuthGuard)
   @Get('me')
-  async me(@Req() req: { user: { id: string; role: string } }) {
+  me(@Req() req: AuthReq) {
     return this.prisma.user.findUniqueOrThrow({
       where: { id: req.user.id },
-      select: { id: true, username: true, fullName: true, role: true },
+      select: {
+        id: true,
+        username: true,
+        fullName: true,
+        role: true,
+        mustChangePassword: true,
+      },
     });
   }
-  
+
+  @AllowPasswordChange()
+  @UseGuards(JwtAuthGuard)
+  @Post('change-password')
+  changePassword(
+    @Req() req: AuthReq,
+    @Body() body: { currentPassword: string; newPassword: string },
+  ) {
+    return this.auth.changePassword(
+      req.user.id,
+      body?.currentPassword,
+      body?.newPassword,
+    );
+  }
 }

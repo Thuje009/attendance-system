@@ -35,7 +35,6 @@ export default function AppLayout({
       <Suspense fallback={<HeaderFallback />}>
         <HeaderContent />
       </Suspense>
-
       <div>{children}</div>
     </div>
   );

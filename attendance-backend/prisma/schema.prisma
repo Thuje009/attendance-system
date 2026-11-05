@@ -41,6 +41,11 @@ model User {
   isActive     Boolean  @default(true)    // สถานะบัญชี (เปิด/ปิดใช้งาน)
   createdAt    DateTime @default(now())   // วันเวลาที่สร้างบัญชี
 
+  mustChangePassword Boolean   @default(false)
+  passwordChangedAt  DateTime?
+  failedLogins       Int       @default(0)
+  lockedUntil        DateTime?
+
   // ความสัมพันธ์: ครู 1 คน สามารถดูแลได้หลายห้องเรียน
   classrooms TeacherClassroom[]
   // ความสัมพันธ์: ครู 1 คน เป็นผู้กดบันทึกการเช็คชื่อได้หลายรอบ

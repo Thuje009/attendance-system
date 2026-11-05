@@ -16,6 +16,9 @@ export default async function Home() {
 
   try {
     me = await getCurrentUser();
+    if (me.mustChangePassword) {
+      redirect("/account/password");
+    }
   } catch {
     redirect("/login");
   }

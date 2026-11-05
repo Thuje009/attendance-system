@@ -17,11 +17,24 @@ export async function loginAction(
   });
 
   if (!res.ok) {
+    // 429 = บัญชีถูกล็อกชั่วคราว ให้แสดงข้อความจาก backend (บอกเวลาที่เหลือ)
+    if (res.status === 429) {
+      const body = await res.json().catch(() => null);
+      return {
+        error:
+          typeof body?.message === "string"
+            ? body.message
+            : "ลองผิดหลายครั้ง กรุณารอสักครู่แล้วลองใหม่",
+      };
+    }
     return { error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" };
   }
 
+
   const data = await res.json();
   await setToken(data.accessToken);
+
+  if (data.user.mustChangePassword) redirect("/account/password");
   redirect(data.user.role === "ADMIN" ? "/classrooms" : "/classes");
 }
 

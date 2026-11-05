@@ -31,12 +31,11 @@ export async function api<T>(
 
   if (!res.ok) {
     const err = await res.json().catch(() => null);
-
-    throw new Error(
-      Array.isArray(err?.message)
-        ? err.message.join(", ")
-        : err?.message ?? `เกิดข้อผิดพลาด (${res.status})`
-    );
+    // บัญชียังไม่ได้เปลี่ยนรหัสผ่าน: พาไปหน้าเปลี่ยนรหัสแทนการแสดง error
+    if (res.status === 403 && err?.code === "PASSWORD_CHANGE_REQUIRED") {
+      redirect("/account/password");
+    }
+    throw new Error(err?.message ?? `เกิดข้อผิดพลาด (${res.status})`);
   }
 
   return res.json() as Promise<T>;
